@@ -100,11 +100,11 @@ class dbSingleton {
       ?.db()
       .collection(collection)
       .aggregate([
-        { $match: { algoTags: tag, replyRoot: { $ne: null } } },
+        { $match: { algoTags: tag, replyRoot: { $ne: null } } }, // will this work if the algoTags is a list of multiple tags? what if a post is indexed in multiple algos?
         {
           $group: {
             _id: '$replyRoot',
-            count: { $sum: 1 },
+            count: { $count: {} },
           },
         },
         { $match: { count: { $gt: threshold } } },
@@ -119,6 +119,21 @@ class dbSingleton {
       ?.db()
       .collection(out)
       .deleteMany({ indexedAt: { $ne: indexedAt } })
+  }
+
+  countQuotePosts(
+    quotedPostUri: string,
+    algoTag: string
+  ) {
+    console.log(`Counting quote posts on post ${quotedPostUri}...`)
+    return this.client
+      ?.db()
+      .collection('post')
+      .aggregate([
+        { $match: { algoTags: algoTag, quotedPostUri: quotedPostUri } }, // will this work if the algoTags is a list of multiple tags? what if a post is indexed in multiple algos?
+        { $count: "quotes_count" }
+      ])
+      .toArray()
   }
 
   async getCollection(collection: string) {

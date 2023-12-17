@@ -12,7 +12,7 @@ import { Database } from './db'
 
 import crypto from 'crypto'
 import { Post } from './db/schema'
-import { BskyAgent } from '@atproto/api'
+import { AppBskyEmbedExternal, AppBskyEmbedRecord, BskyAgent } from '@atproto/api'
 
 export class FirehoseSubscription extends FirehoseSubscriptionBase {
   public algoManagers: any[]
@@ -35,9 +35,9 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
         this.algoManagers.push(new algos[algo].manager(db, agent))
       })
 
-      const startPromises = this.algoManagers.map(async (algo) => {
-        if (await algo._start()) {
-          console.log(`${algo.name}: Started`)
+      const startPromises = this.algoManagers.map(async (algoManager) => {
+        if (await algoManager._start()) {
+          console.log(`${algoManager.name}: Started`)
         }
       })
 
@@ -66,20 +66,26 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
 
     const postsToDelete = ops.posts.deletes.map((del) => del.uri)
 
+    const englishPosts = ops.posts.creates.filter((post) => {
+      return post.record.langs?.length === 1 && post.record.langs?.includes("en")
+    })
+
     // Transform posts in parallel
-    const postsCreated = ops.posts.creates.map((create) => ({
-      _id: null,
-      uri: create.uri,
-      cid: create.cid,
-      author: create.author,
-      text: create.record?.text,
-      replyParent: create.record?.reply?.parent.uri ?? null,
-      replyRoot: create.record?.reply?.root.uri ?? null,
-      indexedAt: new Date().getTime(),
-      algoTags: null,
-      embed: create.record?.embed,
-      tags: Array.isArray(create.record?.tags) ? create.record?.tags : [],
-    }))
+    const postsCreated = englishPosts.map((post) => {
+      return {
+        _id: null,
+        uri: post.uri,
+        cid: post.cid,
+        author: post.author,
+        text: post.record?.text,
+        replyParent: post.record?.reply?.parent.uri ?? null,
+        replyRoot: post.record?.reply?.root.uri ?? null,
+        indexedAt: new Date().getTime(),
+        algoTags: null,
+        embed: post.record?.embed,
+        tags: Array.isArray(post.record?.tags) ? post.record?.tags : [],
+      }
+    })
 
     const postsToCreatePromises = postsCreated.map(async (post) => {
       const algoTagsPromises = this.algoManagers.map(async (manager) => {
@@ -119,9 +125,9 @@ export class FirehoseSubscription extends FirehoseSubscriptionBase {
     }
 
     if (postsToCreate.length > 0) {
-      postsToCreate.forEach(async (to_insert) => {
-        if (to_insert)
-          await this.db.replaceOneURI('post', to_insert.uri, to_insert)
+      postsToCreate.forEach(async (postToInsert) => {
+        if (postToInsert)
+          await this.db.replaceOneURI('post', postToInsert.uri, postToInsert)
       })
     }
   }

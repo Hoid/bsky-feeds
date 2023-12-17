@@ -35,11 +35,11 @@ export class AlgoManager {
 
     let task_inverval_mins = 15
     if (
-      process.env.FEEDGEN_TASK_INTEVAL_MINS !== undefined &&
-      Number.parseInt(process.env.FEEDGEN_TASK_INTEVAL_MINS) > 0
+      process.env.FEEDGEN_TASK_INTERVAL_MINS !== undefined &&
+      Number.parseInt(process.env.FEEDGEN_TASK_INTERVAL_MINS) > 0
     ) {
       task_inverval_mins = Number.parseInt(
-        process.env.FEEDGEN_TASK_INTEVAL_MINS,
+        process.env.FEEDGEN_TASK_INTERVAL_MINS,
       )
     }
 
